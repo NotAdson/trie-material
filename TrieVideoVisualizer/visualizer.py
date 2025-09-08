@@ -55,6 +55,10 @@ class Visualizer:
         dot = Digraph()
         dot.attr(rankdir='TB', splines='curved')
         dot.attr('graph', dpi='300')
+
+        if self.graph_size:
+            dot.attr('graph', size=self.graph_size)
+
         dot.node("root", "Trie", shape="plaintext", fontsize="30", fontname="Helvetica-Bold")
         dot.edge("root", str(id(trie_root)), style="dashed")
         
@@ -107,8 +111,8 @@ class Visualizer:
         # Determine canvas size from graphviz output to create a static frame.
         w_inch, h_inch = map(float, self.graph_size.split(','))
         dpi = 300  # Match DPI from _capture_frame
-        max_w = int(w_inch * dpi)
-        max_h = int(h_inch * dpi)
+        max_w = int(w_inch * dpi) + 100
+        max_h = int(h_inch * dpi) + 100
 
         # Ensure dimensions are even for the yuv420p codec.
         max_w = (max_w + 1) // 2 * 2
@@ -120,7 +124,7 @@ class Visualizer:
         # This ensures all frames are placed on the same background, creating a "static camera" effect.
         command = (
             f"ffmpeg -y -framerate {framerate} -i '{frames_pattern}' "
-            f"-vf \"pad={max_w}:{max_h}:-1:-1:color=white\" "
+            f"-vf \"pad={max_w}:{max_h}:(ow-iw)/2:(oh-ih)/2:color=white\" "
             f"-c:v libx264 -crf 18 -r {framerate} -pix_fmt yuv420p '{video_path}'"
         )
 
