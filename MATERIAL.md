@@ -17,9 +17,9 @@ Este atributo é extremamente importante para o funcionamento da Trie por defini
 
 - **Exemplo:**
 > Digamos que adicionamos a palavra "Carrossel".
-> 
-> Nossa estrutura ficaria assim: C -> A -> R -> R -> O -> S -> S -> E -> L
-
+>
+>Nossa estrutura ficaria assim: ROOT -> C -> A -> R -> R -> O -> S -> S -> E -> <b>L</b>
+>
 > Podemos pesquisá-la através do método search que veremos adiante, e o retorno será **true**, pois ela foi inserida. Agora caso pesquisarmos pela palavra "Carro", comumente se pensaria que ela está ao visualizar a estrutura que temos, porém ela nunca foi adicionada. Para isso que temos nosso atributo mágico "wordEnd", que define se certo nó que representa uma letra n também se refere ao fim de uma palavra. Nosso algoritmo olharia para o nó que representa a letra "o" da **nossa estrutura** e se perguntaria "Esta letra é o fim de uma palavra?". E no nosso caso, essa resposta seria **false**.
 
 - Veja a implementação da classe Node (Atributos e construtor):
@@ -36,6 +36,7 @@ Este atributo é extremamente importante para o funcionamento da Trie por defini
     }
 }
 ```
+
 Para a realização das operações, ela conta com os seguintes métodos:
 
 - getSons(): Retorna o mapa de filhos do nó.
@@ -62,25 +63,285 @@ public class Trie {
 ```
 
 ## 3.2 Operações
+
+A maioria dos métodos que veremos são bem intuitivos e nada complexos de serem compreendidos, vamos à leitura.
 ### 3.2.1 Inserção
 
+A inserção de uma palavra na Trie, ocorre caractere por caractere. onde no fim, o nó que representa a última letra da palavra terá seu atributo "endWord" setado como true.
+
+**Vamos exemplificar com a adição da palavra "Material":**
+
+A ideia é iterar sobre a palavra de tal forma que adicionemos letra por letra.
+
+Primeiro, criamos um nó auxiliar partindo do nó root (Node nodeAux). Como sabemos, cada nó tem um HashMap com as letras que partem dele. Dado isso, verificamos se no HashMap de nodeAux, com sua chave sendo a primeira letra da palavra, (m), o valor resultante é um nó ou não. Caso o valor retornado seja null, isso significa que, já que estamos partindo do root, não há nenhuma palavra que inicie com a letra m na estrutura, pois não há um nó no valor afiliado à ela. Sendo assim, temos que criar um novo nó e associá-lo. Desta forma, agora temos um nó representando aquele caractere no root.
+
+Para exemplificar melhor, vamos à um universo paralelo onde a palavra "Marca" já foi adicionada e queremos adicionar "Material". Ao iniciar do root, veremos que em seu HashMap, a chave "m" resulta em um nó, que por sua vez, em seu HashMap, a chave "a" retorna um nó, mas que agora, por sua vez, a chave "t" retorna um valor null, diferente se se verificarmos a chave "r" da palavra "Marca". Portanto, seria necessário instanciar um novo nó e adicioná-lo ao valor da chave "t".
+
+Voltando ao nosso universo canônico, temos a atualização de nodeAux. Como verificamos se a primeira letra "existia" na estrutura, e caso ainda não existisse, adicionamos-a, nodeAux agora será o nó que representa a primeira letra, e agora vamos verificar a existência de um nó que represente a segunda, (a). Veja que é como se tivéssemos dado 1 passo de nó para nó. Estávamos em root, e agora pulamos para o nó da primeira letra. A partir de agora, o processo se repete, verificando se a próxima letra como chave tem algum nó filho instanciado no HashMap do nó atual, se sim, apenas é dado um nodeAux = son, caso contrário, como visto antes, o nó é criado e associado à letra.
+
+Nossa última etapa ocorre após a verificação e adição da última letra, pois estando com ela nas mãos, temos que setar como true o atributo de seu nó que indica que ela é o fim de uma palavra. Após isso, a adição foi concluída com sucesso. 
+
+ - Para melhor compreensão, segue a implementação do método:
+
+```java
+ public void add(String word) {
+    word = word.toLowerCase();
+
+    Node nodeAux = this.root;
+
+    for (int i = 0; i < word.length(); i++) {
+      Node son = nodeAux.getSons().get(word.charAt(i));
+
+      if (son != null) {
+        nodeAux = son;
+
+      } else {
+        Node newNode = new Node();
+        nodeAux.getSons().put(word.charAt(i), newNode);
+        nodeAux = newNode;
+      }
+    }
+
+    nodeAux.setEndOfWord();
+  }
+```
+
 ### 3.2.2 Pesquisa
+
+O método de pesquisa tem como parâmetro a palavra a ser pesquisada na árvore e retorna um valor booleano baseado na pergunta "A palavra está na árvore?"
+
+Assim como em todos os métodos, partimos do nó root, só que diferente da adição, nossas ações baseadas nas verificações são mais simples.
+
+Da mesma forma que o método da inserção de palavras, temos que analisar se no HashMap do nó atual, temos uma referência associada à chave da próxima letra, um nó, ou se temos o valor null. 
+
+Caso o retorno da chave seja null, isto indica que não temos um nó referenciando a letra que estamos verificando na vez, portanto, ela nunca foi adicionada. Neste momento, podemos e devemos retornar o valor **false** para o método, indicando que a palavra não está na estrutura.
+
+Caso contrário, ou seja, o valor de retorno seja um nó, passamos a verificar seu HashMap à procura da próxima letra, e assim em diante.
+
+Daí pode-se pensar que é basicamente isso, dado que caso todas as letras estejam presentes na estrutura obviamente a palavra inteira está presente. Porém, vamos a um exemplo prático:
+
+**Supomos que adicionamos a palavra "Carrossel" e pesquisamos a existência de "Carro":**
+
+ROOT -> C -> A -> R -> R -> O -> S -> S -> E -> <b>L</b>
+
+> Podemos visualizar através da explicação do material, que a partir do nó root, será validada a existência da letra "c", logo após, em seu nó, a existência da letra "a", e assim em diante até chegarmos na verificação da existência da letra "o". Acabou, né? Confirmamos que a palavra "Carro" está presente e podemos retornar **true**...
+
+> É isso que a estrutura apresentada indica, mas nós nunca digitamos o comando add("Carro"), correto? Para isso, utilizamos o atributo que já foi mencionado no material anteriormente, que indica se certa letra representa o fim de uma palavra.
+> Isso seria, obviamente, testado na última letra da palavra pesquisada, no nosso caso, o "o", retornando o valor booleano **false**.
+
+- Para melhor compreensão, segue a implementação do método:
+
+```java
+public boolean search(String word) {
+    word = word.toLowerCase();
+
+    Node nodeAux = this.root;
+
+    for (int i = 0; i < word.length(); i++) {
+      Node son = nodeAux.getSons().get(word.charAt(i));
+
+      if (son == null) return false;
+
+      nodeAux = son;
+    }
+
+    return nodeAux.isEndOfWord();
+  }
+```
+
 ### 3.2.3 Prefixos
+
+A jornada que o método que pesquisa por um prefixo percorre é idêntica ao search que vimos anteriormente, alterando apenas 1 detalhe que simplifica o código. Ou seja, se você sabe implementar o search(), sabe implementar o startsWith(). 
+
+O método recebe como parâmetro um prefixo e retornará um valor booleano referente à existência de qualquer palavra que contenha aquele prefixo.
+
+Assim como no search(), o startsWith() percorrerá letra por letra da palavra verificando se ela existe no mapa de seu nó parent, caso a letra não tenha valor referente, o retorno é **false**, caso contrário chegamos no ponto que o diferencia do search().
+
+Ao chegar na última letra, como estamos tratando de prefixos e não de palavras completas, é irrelevante a verificação isEndOfWord() do nó, portanto, se ao longo do loop o caminho não quebrar e chegar ao fim, apenas retornamos **true**.
+
+- Segue a implementação:
+
+```java
+public boolean startsWith(String prefix) {
+    prefix = prefix.toLowerCase();
+
+    Node nodeAux = this.root;
+
+    for (int i = 0; i < prefix.length(); i++) {
+      Node son = nodeAux.getSons().get(prefix.charAt(i));
+
+      if (son == null) return false;
+
+      nodeAux = son;
+    }
+
+    return true;
+  }
+```
+### 3.2.4 Remoção 
+
+O método da remoção de uma palavra da Trie segue uma sequência de fatos e conta com 2 partes em sua remoção: 
+
+-  **Remoção lógica:** Desliga o atributo endWord do nó referente a última letra da palavra
+-  **Remoção física:** Através de uma verificação consegue saber quando está autorizado a remover completamente a referência ao caractere.
+
+Veremos com mais detalhes os momentos onde as duas partes ocorrem a seguir, mas antes temos que nos inserir nos passos do método de remoção em ordem cronológica.
+
+**Parte 1: Descida**
+
+Inicialmente, temos que descer até o último caractere da palavra, mas, diferente da forma que iteramos por ela até agora, desta vez faremos esse passo recursivamente.
+
+Chamaremos nosso método privado recursivo com 3 parâmetros:
+
+- A palavra a ser removida
+- O nó atual
+- Índice atual
+
+Sendo os 2 útimos primeiramente:
+
+- this.root
+- 0
+
+Nosso algoritmo, enquanto descemos, se baseará em pegar o nó referente a letra atual que estamos tratando e chamar recursivamente. Apenas isso. Simples, não é? Só precisamos substituir nos parâmetros o nó anterior pelo atual e incrementar no index.
+
+**Parte 2: Remoção lógica**
+
+Ao chamarmos o método recursivamente suficiente até o index na qual estamos ser igual ao tamanho da nossa palavra - 1, o que significa que estamos no nó da última letra, aplicamos a remoção lógica, que pode ser traduzida para a desativação do atributo de finalização de palavra do nó e retornamos a função com um valor booleano, que nos informa se o mapa dos filhos do nó é vazio, o que nos levará à nossa outra remoção.
+
+**Parte 3: Subida e remoção física:**
+
+Para subir de volta na árvore utilizaremos a parte dos retornos da função de remoção. 
+
+Cada retorno da função é armazenado em um atributo booleano, que como dito antes, é baseado no fato do mapa de filhos do nó ser vazio ou não. Isso serve para nos indicar se o nó pai tem autorização de remover fisicamente o nó filho de seu mapa, o que não pode acontecer caso o filho tenha alguém referenciado no seu mapa de filhos para não quebrar a construção da árvore.
+
+Caso o retorno tenha sido **true**, o nó remove de seu mapa o valor da chave atual, e após essa verificação, já que a partir de agora não temos certeza se estamos em um nó que é considerado fim de uma palavra, temos que retornar o valor booleano baseado em 2 coisas:
+
+- O mapa do nó é vazio
+- Ele não é fim de uma palavra
+
+A partir desse retorno podemos com segurança avisar ao nó pai se ele pode remover fisicamente seu filho ou não.
+
+Com esses passos subimos a árvore até terminar nossa pilha de execução, finalizando a função do método.
+
+- Segue abaixo a implementação do método "remove":
+
+```java
+public void remove(String word) {
+    word = word.toLowerCase();
+
+    remove(word, this.root, 0);
+  }
+
+private boolean remove(String word, Node node, int index) {
+    Node son = node.getSons().get(word.charAt(index));
+
+    if (son == null) return false;
+
+    if (index == word.length() - 1) {
+      son.turnOffEndOfWord();
+      return son.getSons().isEmpty();
+
+    } else {
+      boolean canRemove = remove(word, son, index + 1);
+      if (canRemove) node.getSons().remove(word.charAt(index));
+      return node.getSons().isEmpty() && !node.isEndOfWord();
+    }
+  }
+```
+## 3.2.5 Listagem de palavras por prefixos
+
+A função deste método é nos retornar uma lista com todas as palavras que iniciam com o prefixo passado como parâmetro.
+
+Assim como o método de remoção, trabalhamos com etapas para a realização do método:
+
+- Descida até o fim do prefixo
+- Adição de palavras através de DFS
+
+**Parte 1: Descida**
+
+Trivialmente, desceremos por iteração na árvore até o nó da última letra do prefixo, quebrando a execução e retornando uma lista vazia caso um nó não exista.
+
+Ao chegarmos no fim, chamaremos nossa função auxiliar que será responsável por montar todas as palavras e adicioná-las na lista que será retornada ao fim do processo através da técnica Depth-First Search (DFS), que percorre uma árvore por profundidade.
+
+**Parte 2: Depth-First Search**
+
+A partir do nó da última letra do prefixo, chamamos a função catchWords() que terá 3 parâmetros:
+
+- O nó atual
+- O prefixo atual
+- A lista de palavras
+
+A cada chamada do método recursivo, sua primeira verificação é se o nó de seu parâmetro é o fim de uma palavra, pois caso seja, o prefixo se trata de uma palavra completa e é adicionado à lista final.
+
+Após a verificação inicial, utilizamos o DFS para percorrer cada ramo da árvore em profundidade concatenando os caracteres e chamando a função recursivamente. No fim do processo, a lista é retornada e temos, por fim, o resultado esperado
+
+- Para melhor compreensão, segue a implementação do método:
+
+```java
+public ArrayList<String> findWordWithPrefix(String prefix) {
+    prefix = prefix.toLowerCase();
+
+    ArrayList<String> words = new ArrayList<>();
+    Node nodeAux = this.root;
+
+    for (int i = 0; i < prefix.length(); i++) {
+      Node son = nodeAux.getSons().get(prefix.charAt(i));
+
+      if (son == null) return words;
+
+      nodeAux = son;
+    }
+
+    return catchWords(nodeAux, prefix, words);
+  }
+
+private ArrayList<String> catchWords(Node currentNode, String currentPrefix, ArrayList<String> currentWords) {
+    if (currentNode.isEndOfWord()) currentWords.add(currentPrefix);
+
+    for (Map.Entry<Character, Node> entry : currentNode.getSons().entrySet()) {
+      String nextPrefix = currentPrefix + entry.getKey();
+      Node nextNode = entry.getValue();
+      catchWords(nextNode, nextPrefix, currentWords);
+    }
+
+    return currentWords;
+  }
+```
 ## 3.3 Análise de complexidade de tempo e memória
-## 3.4 Remoção 
-## 3.5 Listagem de palavras por prefixos
+
+E finalmente chegamos ao motivo do por que a Trie é tão importante e tão famosa nas estruturas de dados de armazenamento. Sua extrema eficiência.
+
+Pode-se pensar que para guardar, utilizando nossa implementação de exemplo, palavras, poderíamos simplesmente colocar todas em uma lista, e caso queiramos alguma, basta fazer uma iteração sobre ela, algo bem básico e cotidiano na programação. Mas em termos de eficiência, em uma escala mais profissional, isso seria muito custoso, dado que teríamos milhões de dados cadastrados, sendo assim em seu pior caso, O(n) | n = tamanho da lista.
+
+A Trie vem pra contornar esse problema de uma forma bem curiosa... Reaproveitando elementos que já estão presentes na estrutura. A essa altura da leitura deste material você já deve ter se dado conta disso (e achado bem interessante). 
+
+- **Exemplo:**
+
+> Ao adicionarmos a palavra "Cama" na estrutura e logo após, "Camaleão" e "Camada", o prefixo "Cama" é reaproveitado, assim, fazendo parte de 3 palavras diferentes!
+
+<br>
+<div align="center">
+ <img src="assets/exemplo-cama.png" height="500">
+</div>
+<br>
+
+Este reaproveitamento é a chave para a economia de memória e a performance da Trie.
+
+Por conseguinte, os métodos de inserção, pesquisa de palavras, pesquisa por prefixos e remoção, são em seu pior caso, O(k) | k = tamanho da palavra passada como parâmetro, sendo extremamente eficiente.
+
+O único método que se diferencia dessa regra é o de listagem das palavras a partir de certo prefixo, sendo em seu pior caso O(p + n) | p = o tamanho do prefixo ∧ n = a soma de todos os nós existentes a partir do prefixo.
+
 # 4 Comparações
 # 5 Variações e otimizações
 ## 5.1 Radix Tree
 ### 5.1.1 Definição
  
-  Uma Radix Tree (também chamada de Compact Trie ou Patricia Tree) é uma estrutura de dados, baseada em nós, que armazena, geralmente, strings ou números de forma eficiente, especialmente quando apresentam prefixos em comum.
+Uma Radix Tree (também chamada de Compact Trie ou Patrícia Tree) é uma estrutura de dados, baseada em nós, que armazena, geralmente, strings ou números de forma eficiente, especialmente quando apresentam prefixos em comum.
 
-  A Radix Tree se trata de uma versão otimizada da Trie, levando-se em consideração que, na Trie, cada nó armazena apenas uma letra de uma palavra. No entanto, a Radix Tree busca armazenar prefixos de palavras, pois, assim, a estrutura se torna mais eficiente para o uso de memória, além de diminuir a quantidade de ramos existentes na árvore.
-
+A Radix Tree se trata de uma versão otimizada da Trie, levando-se em consideração que, na Trie, cada nó armazena apenas uma letra de uma palavra. No entanto, a Radix Tree busca armazenar prefixos de palavras, pois, assim, a estrutura se torna mais eficiente para o uso de memória, além de diminuir a quantidade de ramos existentes na árvore.
 ### 5.1.2 Motivação
   
-  A Trie armazena um apenas caractere por nó. Isso pode resultar em árvores muito grandes, principalmente quando existem palavras que utilizam prefixos semelhantes, fazendo com que a memória não seja utilizada de forma eficiente.
+A Trie armazena um apenas caractere por nó. Isso pode resultar em árvores muito grandes, principalmente quando existem palavras que utilizam prefixos semelhantes, fazendo com que a memória não seja utilizada de forma eficiente.
 
 Vejamos alguns exemplos:
 
@@ -121,6 +382,7 @@ Isso reduz:
 ### 5.1.3 Operações
 
 ### 5.1.3.1 Inserção
+
 - Começa da raiz;
 - A cada passo procura um filho que compartilha um prefixo equivalente à string a ser inserida, ou parte dela;
 - Existem 3 casos de inserção:
@@ -210,10 +472,168 @@ Essa estrutura é formada por:  LOUDS — Level-Order Unary Degree Sequence, Lab
 | Espaço    | `2n + n × log(σ) + o(n)` bits |
 | Busca     | `O(k)`                         |
 | Navegação | `O(1)` ou `O(log n)`           |
-| Inserção  | ❌ Muito alto                  |
-| Remoção   | ❌ Muito alto                  |
+| Inserção  |  Muito alto                  |
+| Remoção   |  Muito alto                  |
 
   Dessa forma, a utilização das Succinct Tries se torna bem mais eficiente para armazenar muitos dados em que são imutáveis, sendo utilizados para buscas ou navegação, ex: dicionários.
+
+## 5.3 Concurrent Tries
+### 5.3.1 Definição
+
+  Concurrent Tries é uma estrutura de dados que, como as outras, também é baseada em árvores e tende a ser uma versão otimizada de uma trie convencional, por utilizar técnicas de lock, além de utilizarem hash’s como estrutura auxiliar. No entanto, ela suporta acesso simultâneo seguro por múltiplas threads sem corromper a estrutura e sem retornar resultados inconsistentes, ou seja, permitem leitura e escrita concorrente, bem como evitam locks globais e minimizam contenção entre threads.
+
+Uma Ctrie é estruturada como uma árvore de prefixos, de modo que: 
+- Cada nó representa um **prefixo**  
+- Cada nível da árvore corresponde a uma **parte do prefixo (caractere)**  
+- Os nós podem conter:
+  - um **mapa de filhos**, que associa cada prefixo aos próximos nós  
+  - e um **valor** (caso represente uma chave completa)  
+- Permite **snapshotting eficiente**, ou seja, tirar uma cópia consistente do trie **sem travar a estrutura**
+
+### 5.3.2 Motivação
+
+  As Ctries possuem grande usabilidade na computação, principalmente em áreas de roteamento de IP, interpretação de linguagens, caches em tempo real, Servidores HTTP ou REST com alta concorrência e etc. Isso acontece, pois nas Ctries vários usuários podem fazer a mesma operação ao mesmo tempo que não vai haver a perca ou sobrescreção de dados, isso ocorre pois essa estrutura utiliza de técnicas avançadas para inserção, remoção e busca, vejamos:
+###  Lock-Based Tries
+- Usa **locks finos** em cada nó para permitir múltiplas operações paralelas, ou seja, em vez de travar a estrutura toda para fazer uma operação, você trava apenas a menor parte necessária  
+- Conforme aumenta o número de threads, melhor a estrutura funciona  
+- Reduz a chance de threads ficarem esperando  
+
+---
+
+### Lock-Free Tries
+- Usa **instruções atômicas**, como o **CAS**, pois evita deadlock, contenção e se torna mais seguro por ser feito em hardware  
+- Evita completamente locks, mas é mais difícil de implementar  
+- Melhor performance sob alta concorrência  
+
+---
+
+### Immutable Tries
+- Cada modificação cria uma **nova versão** da estrutura  
+- Threads podem acessar **versões antigas com segurança**, pois os nós são imutáveis  
+- Não destroem o estado anterior de um nó  
+
+### 5.3.3 Operações 
+
+### Inserção
+- Percorre os nós até onde a chave diverge ou termina  
+- Cria novos nós se necessário  
+- Em Ctries (hash tries), percorre a árvore inspecionando blocos de bits do hash  
+
+---
+
+### Busca
+- Caminha até o final da chave  
+- Se a estrutura for bem balanceada e não houver colisões (no hash), a profundidade é limitada  
+
+---
+
+### Remoção
+- Encontra o nó da chave  
+- Marca como removido  
+
+---
+
+### Snapshot
+- Apenas aponta para o nó raiz atual  
+- Como os nós são imutáveis, não há risco de inconsistência  
+- Leitores podem continuar acessando a versão antiga mesmo após novas inserções  
+
+### 5.3.4 Complexidade
+
+| Operação     | Complexidade Média   | Pior caso | Observações                                           |
+| ------------ | -------------------- | --------- | ----------------------------------------------------- |
+| **Inserção** | `O(k)` ou `O(log n)` | `O(k)`    | Um nó por caractere/nível; pode haver colisões        |
+| **Busca**    | `O(k)` ou `O(log n)` | `O(k)`    | Caminha até a folha correspondente                    |
+| **Remoção**  | `O(k)`               | `O(k)`    | Pode envolver limpeza de nós intermediários |
+| **Snapshot** | `O(1)`               | `O(1)`    | Apenas copia a referência do nó raiz (imutável)      |
+
+## 5.4 BURST TRIES
+
+### 5.4.1 Definição
+
+ Burst Tries nada mais é do que uma estrutura de dados híbrida, pois utiliza uma organização hierárquica de uma Trie convencional (árvore), mas conta também com a utilização de buffers (arrays) nas folhas para o armazenamento de um conjunto de chaves com prefixos em comum. Se trata, assim como as anteriores, de uma versão otimizada de uma Trie, que garante melhor performance e otimização do uso da memória, pois armazena múltiplas chaves por folhas (buffers). Um problema da estrutura surge quando o buffer de uma ou mais folhas, ficam totalmente preenchidos, assim é feito o chamado “burst”, que consiste em criar novos nós internos e redistribuir as chaves armazenadas com base nos próximos caracteres. Desse modo a árvore cresce sob demanda.
+  Essa estrutura garante um grande ganho de desempenho no que se diz respeito a busca, inserção e armazenamento de grandes conjuntos de strings, pois reduz o overhead de ponteiros em tries tradicionais e melhora a localidade de cache. Vejamos cenários que apresentam boa usabilidade:
+
+- Compiladores;
+- Sistemas de indexação;
+- Dicionários dinâmicos.
+
+### 5.4.2 Motivação
+
+  Como já foi discutido anteriormente, as Tries tradicionais são excelentes estruturas para armazenarem dados com base em prefixos, no entanto essa estrutura possui algumas limitações ao armazenar um grande conjunto de dados, como: uso excessivo de memória, muitos ponteiros e crescimento excessivo da árvore.
+  Desse modo, surge as Burst Tries que consegue equilibrar eficiência e praticidade, porquanto armazenam várias chaves com um mesmo prefixo em um único buffer	 e quando esse buffer atinge sua capacidade máxima, novos nós intermediários são criados e as chaves são divididas com base no próximo caractere, assim evitando a criação prematura de nós e reduzindo o consumo de memória.
+
+### 5.4.3 Operações 
+
+### Inserção
+- Busca o buffer correspondente ao prefixo;
+- Insere a chave no buffer;
+- Se ultrapassar o limite do buffer, ocorre o burst;
+- Cria um novo buffer;
+- Redistribui as chaves em novos nós, com base nos novos prefixos;
+
+### Busca
+- Caminha pela trie até o buffer correspondente;
+- Procura a chave dentro do buffer (usando busca binária);
+
+### Remoção
+- Encontra o buffer da chave;
+- Remove a chave do buffer;
+- Opcionalmente remove subtries vazias;
+
+### 5.4.4 Complexidade
+
+| Operação     | Complexidade Média | Pior Caso  | Observações                                        |
+|--------------|--------------------|------------|----------------------------------------------------|
+| **Busca**    | `O(k + log m)`     | `O(k + m)` | `k` = tamanho da chave, `m` = tamanho do buffer    |
+| **Inserção** | `O(k + log m)`     | `O(k + m)` | Pode causar *burst* → redistribuição de `m` chaves |
+| **Remoção**  | `O(k + log m)`     | `O(k + m)` | Sem burst, só remove do buffer                     |
+| **Burst**    | —                  | `O(m)`     | Ocorre apenas quando buffer atinge o limite        |
+
+## 5.5 Ternary Search Tries
+
+### 5.5.1 Definição
+
+  Uma Ternary Search Tree é uma estrutura de dados que combina as propriedades de uma Trie convencional e árvores de busca binária (BST), adaptada para armazenar strings de forma eficiente, tanto em relação ao tempo, quanto em relação ao consumo de memória. Sua estrutura é composta por um nó, que armazena um único caractere e três filhos, um à esquerda (para armazenar caracteres menores que o pai), um ao centro (para o próximo caractere da string, se o caractere atual for igual) e um à direita (para caracteres maiores que o pai). As TST’s tem grande usabilidade no dia à dia, como: sistemas de busca de autocomplete, dicionários e corretores ortográficos, compiladores e interpretadore e entre outros.
+  Ademais, sua ideia principal é percorrer cada caractere de forma ordenada, de forma análoga à uma busca binária sobre a palavra, mas mantendo a estrutura sequencial das strings. A TST se torna mais eficiente, pois:
+
+- Nas tries, cada nó pode ter 256 filhos (seguindo a tabela ASCII), o que exige grandes hashes;
+- Em TST’s , cada nó possui apenas 3 ponteiros;
+- Em grandes conjuntos de palavras se torna muito eficiente.
+
+### 5.5.2 Operações
+
+### Inserção
+- Inicia pela raiz e compara cada caractere;
+- Se menor, vai pra subárvore à esquerda;
+- Se maior, vai pra subárvore à direita;
+- Se igual, avança para o filho do meio.
+
+### Busca
+- Percorre cada caractere e faz as mesmas comparações da inserção;
+- A palavra existe se o algoritmo chegar a um nó marcado como "fim de palavra".
+
+### Remoção
+- Faz uma busca da palavra a ser removida;
+- Caso a encontre, a marca como “removida”;
+- Caso contrário, não faz nada, pois a palavra a ser removida não está lá;
+- Opcionalmente, ramos vazios podem ser removidos.
+
+### Busca por prefixo
+- Percorre todo o prefixo;
+- Depois, faz travessia da subárvore do meio coletando palavras.
+
+### 5.5.3 Complexidade
+
+| Operação           | Complexidade (Tempo) | Observações                                           |
+|--------------------|----------------------|--------------------------------------------------------|
+| **Busca**          | O(k + h)             | `k` = tamanho da string, `h` = altura da árvore        |
+| **Inserção**       | O(k + h)             | Pode precisar criar até `k` novos nós                 |
+| **Remoção**        | O(k + h)             | Remove marca de fim de palavra; poda é opcional       |
+| **Busca por prefixo** | O(k + n)          | `n` = nº de palavras com o prefixo; percorre subárvore|
+| **Espaço (Memória)**| O(n·k)              | Menor que trie, pois só 3 ponteiros por nó            |
+
+  Em diversos cenários, a TST garante a praticidade e excelente performance, devido a sua compacidade dos dados e do acesso sequencial dos caracteres, bem como a comparação de prefixos ocorre ordenadamente, garantindo o melhor aproveitamento da memória. Além disso, se a árvore estiver balanceada, o custo de h = log n, assim como nas BST’s convencionais.
 
 # 6 Aplicações no mundo real
 ## 6.1 Rede de Computadores
